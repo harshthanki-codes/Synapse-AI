@@ -40,6 +40,9 @@ class ReviewResult(BaseModel):
     is_approved: bool = Field(description="True if the output meets all criteria, False otherwise.")
     reason: str = Field(description="Specific, concrete reasons for approval or rejection.")
 
+# Backward compatibility alias
+ReviewVerdict = ReviewResult
+
 # --- LLM Initialization (Multi-key fallback for quota limits) ---
 api_keys = [os.environ.get(f"GEMINI_API_KEY_{i}") for i in range(1, 6) if os.environ.get(f"GEMINI_API_KEY_{i}")]
 

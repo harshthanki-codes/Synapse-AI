@@ -2,8 +2,9 @@ import unittest
 from pydantic import ValidationError
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from assignment_2.agent import ReviewVerdict
+import importlib
+a2 = importlib.import_module("assignment-2.agent")
+ReviewVerdict = a2.ReviewVerdict
 
 class TestSchemas(unittest.TestCase):
     def test_review_verdict_valid(self):

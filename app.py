@@ -1,7 +1,9 @@
 import gradio as gr
 import importlib
 from langchain_core.messages import HumanMessage, SystemMessage
+import json
 import ast
+import os
 
 a1 = importlib.import_module("assignment-1.agent")
 a2 = importlib.import_module("assignment-2.agent")
@@ -38,16 +40,21 @@ def run_a3_interactive(crash_toggle):
     from langchain_core.runnables import RunnableConfig
     config = RunnableConfig(configurable={"thread_id": "test_session_1", "crash_at_item_3": crash_toggle})
     
-    import json
+    if not crash_toggle and os.path.exists(".resumed"):
+        try:
+            os.remove(".resumed")
+        except OSError:
+            pass
+
     try:
         a3.app.invoke({"items": ["Company A experienced a 20% revenue growth.", "The new cloud division is profitable.", "Stock prices drop sharply."]}, config=config)
         
         final_state = a3.app.get_state(config).values
-        completed = final_state.get("completed_items", {})
+        completed = final_state.get("results") or final_state.get("completed_items", {})
         return json.dumps(completed, indent=2)
     except SystemExit:
         final_state = a3.app.get_state(config).values
-        completed = final_state.get("completed_items", {})
+        completed = final_state.get("results") or final_state.get("completed_items", {})
         return f"🚨 FATAL CRASH INTERCEPTED (Item #3)\n\nSystem state safely persisted to SQLite.\n\nDatabase Snapshot:\n{json.dumps(completed, indent=2)}\n\n(Uncheck 'Simulate Crash' and run again to watch the checkpointer perfectly resume.)"
 
 custom_theme = gr.themes.Monochrome(
@@ -251,7 +258,22 @@ with gr.Blocks(title="Synapse AI Nexus") as demo:
                     def export_memory():
                         import tempfile
                         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".json", mode="w")
-                        json.dump({"status": "exported", "active_checkpoints": 42, "corruptions_averted": 7}, tmp, indent=2)
+                        state_values = {}
+                        try:
+                            from langchain_core.runnables import RunnableConfig
+                            cfg = RunnableConfig(configurable={"thread_id": "test_session_1"})
+                            snapshot = a3.app.get_state(cfg)
+                            if snapshot and snapshot.values:
+                                state_values = snapshot.values
+                        except Exception as e:
+                            state_values = {"error": str(e)}
+                            
+                        export_data = {
+                            "status": "exported",
+                            "checkpoint_thread": "test_session_1",
+                            "persisted_state": state_values or {"message": "No active state found yet; execute pipeline first."}
+                        }
+                        json.dump(export_data, tmp, indent=2)
                         tmp.close()
                         return tmp.name
                         

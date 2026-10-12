@@ -5,6 +5,7 @@ from typing import Annotated, TypedDict
 from dotenv import load_dotenv
 
 from langchain_core.messages import HumanMessage
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -36,7 +37,7 @@ def process_item(state: AgentState):
     """Processes the current item and increments the index."""
     idx = state.get("current_index", 0)
     items = state.get("items", [])
-    results = state.get("results", {})
+    results = dict(state.get("results", {}))
     calls = state.get("llm_call_count", 0)
     
     if idx >= len(items):
@@ -67,6 +68,7 @@ def process_item(state: AgentState):
     
     return {
         "results": results,
+        "completed_items": results,
         "current_index": idx + 1,
         "llm_call_count": calls
     }
@@ -103,14 +105,18 @@ def check_results(state: AgentState):
     return {"llm_call_count": calls}
 
 # --- Routing ---
-def route_processing(state: AgentState):
+def route_processing(state: AgentState, config: RunnableConfig | None = None):
     idx = state.get("current_index", 0)
     items = state.get("items", [])
     
     if idx < len(items):
+        crash_enabled = True
+        if config and isinstance(config, dict) and "configurable" in config:
+            crash_enabled = config["configurable"].get("crash_at_item_3", True)
+
         # We simulate a crash/stop after the 2nd item (index 1) has been processed.
         # This allows us to demonstrate resume functionality.
-        if idx == 2 and not os.path.exists(".resumed"):
+        if crash_enabled and idx == 2 and not os.path.exists(".resumed"):
             logger.critical("\n[FATAL] Simulated crash! Process interrupted before processing item 3.")
             with open(".resumed", "w") as f:
                 f.write("true") # Marker so we don't crash again on resume
