@@ -1,8 +1,10 @@
+import ast
 import os
 import sys
+import time
 import logging
-from typing import Annotated, TypedDict
-from dotenv import load_dotenv
+from typing import Annotated, Literal, TypedDict
+from utils.helpers import load_env, strip_code_fences, telemetry_tracker
 
 from pydantic import BaseModel, Field
 from langchain_core.messages import HumanMessage
@@ -10,7 +12,7 @@ from langgraph.graph import StateGraph, END
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.callbacks import BaseCallbackHandler
 
-load_dotenv()
+load_env()
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -23,17 +25,28 @@ class TokenTrackingCallback(BaseCallbackHandler):
 
     def on_llm_end(self, response, **kwargs):
         self.total_calls += 1
-        if response.llm_output and "token_usage" in response.llm_output:
-            self.total_tokens += response.llm_output["token_usage"].get("total_tokens", 0)
+        tokens_added = 0
+        if getattr(response, "llm_output", None) and "token_usage" in response.llm_output:
+            tokens_added = response.llm_output["token_usage"].get("total_tokens", 0)
+        elif getattr(response, "generations", None):
+            for gen_list in response.generations:
+                for gen in gen_list:
+                    msg = getattr(gen, "message", None)
+                    usage = getattr(msg, "usage_metadata", None)
+                    if isinstance(usage, dict):
+                        tokens_added += usage.get("total_tokens", 0)
+        self.total_tokens += tokens_added
 
 token_tracker = TokenTrackingCallback()
 
 # --- State ---
-class AgentState(TypedDict):
+class AgentState(TypedDict, total=False):
     task: str
     worker_output: str
     review_verdict: str
     review_reason: str
+    revision_count: int
+    max_revisions: int
 
 # --- Pydantic Models for Structured Output ---
 class ReviewResult(BaseModel):
@@ -55,20 +68,49 @@ else:
 # --- Nodes ---
 def worker_node(state: AgentState):
     logger.info("--- WORKER AGENT RUNNING ---")
-    prompt = f"Write a Python function for the following task:\n{state['task']}\n\nOnly output the code, no markdown wrappers."
+    feedback = state.get("review_reason", "")
+    revision = state.get("revision_count", 0)
+    if revision > 0 and feedback:
+        prompt = (
+            f"Write a Python function for the following task:\n{state['task']}\n\n"
+            f"Previous attempt was rejected by Reviewer for this reason:\n{feedback}\n\n"
+            f"Fix all issues, include full type hints, and only output valid Python code with no markdown wrappers."
+        )
+    else:
+        prompt = f"Write a Python function for the following task:\n{state['task']}\n\nOnly output the code, no markdown wrappers."
     
+    t0 = time.perf_counter()
     response = llm.invoke([HumanMessage(content=prompt)])
+    elapsed_ms = (time.perf_counter() - t0) * 1000.0
+    cleaned_code = strip_code_fences(response.content)
+    telemetry_tracker.record_event("Worker-Core2", elapsed_ms, tokens=max(len(cleaned_code) // 4, 20), status="ACTIVE")
     logger.info("Worker produced output.")
     
-    return {"worker_output": response.content}
+    return {"worker_output": cleaned_code}
 
 def reviewer_node(state: AgentState):
     logger.info("--- REVIEWER AGENT RUNNING ---")
-    
-    # Define concrete criteria
+    task_text = state.get("task", "")
+    code_text = strip_code_fences(state.get("worker_output", ""))
+    revision_count = state.get("revision_count", 0) + 1
+
+    # Deterministic AST syntax check first
+    try:
+        ast.parse(code_text)
+    except SyntaxError as syn_err:
+        reason = f"SyntaxError in generated Python code at line {syn_err.lineno}: {syn_err.msg}"
+        logger.info("Reviewer Verdict: REJECTED (AST SyntaxError)")
+        return {"review_verdict": "rejected", "review_reason": reason, "revision_count": revision_count}
+
+    needs_time_module = any(w in task_text.lower() for w in ("sleep", "retry", "backoff", "delay", "wait"))
+    time_criterion = (
+        "1. Must use the standard library 'time' module for sleeping/delays.\n"
+        if needs_time_module
+        else "1. Must use clean, idiomatic standard Python constructs.\n"
+    )
     criteria = (
-        "1. Must use the standard library 'time' module for sleeping.\n"
-        "2. Must include type hints.\n"
+        f"{time_criterion}"
+        "2. Must include type hints on function parameters and return value.\n"
         "3. Must not contain any syntax errors or incomplete code.\n"
     )
     
@@ -76,21 +118,37 @@ def reviewer_node(state: AgentState):
     Review the following Python code against these strict criteria:
     {criteria}
     
-    Task: {state['task']}
+    Task: {task_text}
     Code to review:
-    {state['worker_output']}
+    {code_text}
     
     If it fails ANY criteria, reject it with a specific reason.
     """
     
-    # Use structured output for the reviewer
+    t0 = time.perf_counter()
     reviewer_llm = llm.with_structured_output(ReviewResult)
     result = reviewer_llm.invoke([HumanMessage(content=prompt)])
+    elapsed_ms = (time.perf_counter() - t0) * 1000.0
+    telemetry_tracker.record_event("Reviewer-Core2", elapsed_ms, tokens=max(len(result.reason) // 4, 20), status="ACTIVE")
     
     verdict = "approved" if result.is_approved else "rejected"
     logger.info(f"Reviewer Verdict: {verdict.upper()}")
     
-    return {"review_verdict": verdict, "review_reason": result.reason}
+    return {
+        "review_verdict": verdict,
+        "review_reason": result.reason,
+        "revision_count": revision_count,
+    }
+
+def should_retry_review(state: AgentState) -> Literal["worker", "__end__"]:
+    """Routes back to worker if rejected and within max_revisions budget."""
+    verdict = state.get("review_verdict", "")
+    revision_count = state.get("revision_count", 0)
+    max_revisions = state.get("max_revisions", 0)
+    if verdict == "rejected" and revision_count <= max_revisions:
+        logger.info(f"Routing back to Worker for self-correction (Revision {revision_count}/{max_revisions})...")
+        return "worker"
+    return "__end__"
 
 # --- Graph Assembly ---
 workflow = StateGraph(AgentState)
@@ -99,7 +157,7 @@ workflow.add_node("reviewer", reviewer_node)
 
 workflow.set_entry_point("worker")
 workflow.add_edge("worker", "reviewer")
-workflow.add_edge("reviewer", END)
+workflow.add_conditional_edges("reviewer", should_retry_review, {"worker": "worker", "__end__": END})
 
 app = workflow.compile()
 

@@ -1,8 +1,9 @@
 import os
 import sys
+import time
 import logging
 from typing import Annotated, TypedDict
-from dotenv import load_dotenv
+from utils.helpers import clean_content, load_env, telemetry_tracker
 
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
@@ -11,15 +12,16 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel, Field
 
-load_dotenv()
+load_env()
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 # --- State ---
-class AgentState(TypedDict):
+class AgentState(TypedDict, total=False):
     items: list[str]
     results: dict[str, str]
+    completed_items: dict[str, str]
     current_index: int
     llm_call_count: int
 
@@ -47,6 +49,7 @@ def process_item(state: AgentState):
     logger.info(f"\n--- PROCESSING ITEM {idx + 1}/{len(items)} ---")
     logger.info(f"Content: {item}")
     
+    t0 = time.perf_counter()
     # Deliberately poison item index 2 to test the validation check later
     if idx == 2:
         logger.warning("[!] Deliberately poisoning result for item 3 (index 2)")
@@ -55,14 +58,10 @@ def process_item(state: AgentState):
         prompt = f"Summarize this short text in one sentence: {item}"
         response = llm.invoke([HumanMessage(content=prompt)])
         calls += 1
-        # Robustly handle if the model returns a list or a string
-        raw_content = response.content
-        if isinstance(raw_content, list):
-            # Extract text from the first item if it's a list of dictionaries
-            summary = raw_content[0].get("text", "").strip() if isinstance(raw_content[0], dict) else str(raw_content).strip()
-        else:
-            summary = raw_content.strip()
+        summary = clean_content(response.content)
         
+    elapsed_ms = (time.perf_counter() - t0) * 1000.0
+    telemetry_tracker.record_event("SQLite-Checkpointer", elapsed_ms, tokens=max(len(summary) // 4, 15), status="SYNCED")
     results[f"item_{idx}"] = summary
     logger.info(f"Result saved: {summary}")
     
@@ -74,24 +73,24 @@ def process_item(state: AgentState):
     }
 
 def check_results(state: AgentState):
-    """Self-check node that verifies all items were processed correctly."""
+    """Self-check node that verifies all items were processed correctly and self-heals corrupted entries."""
     logger.info("\n--- RUNNING SELF-CHECK VALIDATION ---")
     
-    items = state["items"]
-    results = state["results"]
+    items = state.get("items", [])
+    results = dict(state.get("results", {}))
     calls = state.get("llm_call_count", 0)
     
+    class Validation(BaseModel):
+        is_valid: bool = Field(description="True if the summary accurately reflects the text and is not blank/corrupted.")
+        reason: str = Field(description="Reason for validity or invalidity")
+        
+    validator_llm = llm.with_structured_output(Validation)
+
     for i, original_text in enumerate(items):
         key = f"item_{i}"
         result = results.get(key, "")
         
         logger.info(f"Validating item {i+1}...")
-        
-        class Validation(BaseModel):
-            is_valid: bool = Field(description="True if the summary accurately reflects the text and is not blank/corrupted.")
-            reason: str = Field(description="Reason for validity or invalidity")
-            
-        validator_llm = llm.with_structured_output(Validation)
         prompt = f"Original text: {original_text}\n\nSummary: {result}\n\nIs this summary a valid, non-empty reflection of the original text?"
         
         val_res = validator_llm.invoke([HumanMessage(content=prompt)])
@@ -99,10 +98,21 @@ def check_results(state: AgentState):
         
         if not val_res.is_valid:
             logger.error(f"[!] VALIDATION FAILED on item {i+1}: {val_res.reason}")
+            logger.info(f"[↻] Self-healing corrupted item {i+1}...")
+            heal_prompt = f"Summarize this short text accurately in one sentence: {original_text}"
+            heal_resp = llm.invoke([HumanMessage(content=heal_prompt)])
+            calls += 1
+            healed_summary = clean_content(heal_resp.content)
+            results[key] = healed_summary
+            logger.info(f"[✓] Item {i+1} self-healed: {healed_summary}")
         else:
             logger.info(f"[✓] Item {i+1} passed validation.")
             
-    return {"llm_call_count": calls}
+    return {
+        "results": results,
+        "completed_items": results,
+        "llm_call_count": calls,
+    }
 
 # --- Routing ---
 def route_processing(state: AgentState, config: RunnableConfig | None = None):
@@ -139,6 +149,21 @@ import sqlite3
 conn = sqlite3.connect("state.db", check_same_thread=False)
 memory = SqliteSaver(conn)
 app = workflow.compile(checkpointer=memory)
+
+def reset_thread(thread_id: str = "test_session_1") -> None:
+    """Clears checkpoint state for a specific thread_id and removes the .resumed marker."""
+    if os.path.exists(".resumed"):
+        try:
+            os.remove(".resumed")
+        except OSError:
+            pass
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM checkpoints WHERE thread_id = ?", (thread_id,))
+        cur.execute("DELETE FROM writes WHERE thread_id = ?", (thread_id,))
+        conn.commit()
+    except Exception:
+        pass
 
 if __name__ == "__main__":
     thread_config = {"configurable": {"thread_id": "assignment_3_run"}}

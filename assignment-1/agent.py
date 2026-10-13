@@ -1,16 +1,17 @@
 import os
 import sys
+import time
 import logging
 from typing import Annotated, Sequence, TypedDict, Literal
 
-from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 from langchain_core.tools import tool
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 from langchain_google_genai import ChatGoogleGenerativeAI
-from dotenv import load_dotenv
+from utils.helpers import load_env, telemetry_tracker
 
-load_dotenv()
+load_env()
 
 # Configure logging for standard output reasoning traces
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -61,11 +62,19 @@ def call_agent(state: AgentState):
     messages = state["messages"]
     logger.info("\n--- LLM REASONING STEP ---")
     
-    # We pass the messages to the LLM to get a response
-    response = llm_with_tools.invoke(messages)
+    t0 = time.perf_counter()
+    try:
+        response = llm_with_tools.invoke(messages)
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
+        telemetry_tracker.record_event("Researcher-Core1", elapsed_ms, tokens=max(len(str(response.content)) // 4, 25), status="ACTIVE")
+    except Exception as exc:
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
+        logger.error(f"LLM invocation error: {exc}")
+        telemetry_tracker.record_event("Researcher-Core1", elapsed_ms, tokens=0, status="DEGRADED")
+        response = AIMessage(content=f"Fallback response (LLM unavailable): {exc}")
     
     # Trace logic
-    if response.tool_calls:
+    if getattr(response, "tool_calls", None):
         for tc in response.tool_calls:
             logger.info(f"DECISION: Call tool '{tc['name']}' with args {tc['args']}.")
             logger.info(f"REASON: The agent requires this data to formulate an answer.")

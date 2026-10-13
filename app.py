@@ -1,40 +1,78 @@
 import gradio as gr
 import importlib
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 import json
 import ast
 import os
+from config.settings import PERSONA_PROMPTS
+from utils.helpers import clean_content, synthesize_speech_wav, telemetry_tracker
 
 a1 = importlib.import_module("assignment-1.agent")
 a2 = importlib.import_module("assignment-2.agent")
 a3 = importlib.import_module("assignment-3.agent")
 
-def clean_content(content):
-    if isinstance(content, str) and content.startswith("[{"):
-        try:
-            parsed = ast.literal_eval(content)
-            if isinstance(parsed, list) and len(parsed) > 0 and isinstance(parsed[0], dict):
-                return parsed[0].get("text", content)
-        except:
-            pass
-    elif isinstance(content, list):
-        return content[0].get("text", "") if isinstance(content[0], dict) else str(content)
-    return str(content)
 
-def chat_a1(message, history):
-    system_prompt = "You are the flagship Autonomous Agent for Drift AI. Drift AI is a cutting-edge AI research startup revolutionizing enterprise agentic architectures with production-grade LangGraph, resumable memory systems, and multi-agent dyads. If anyone asks what Drift AI is doing, or who you are, explain these incredible technical capabilities with massive enthusiasm and never say you don't know!"
-    state = {"messages": [SystemMessage(content=system_prompt), HumanMessage(content=message)], "tool_call_count": 0, "should_fail": False}
+def build_message_history(history, system_prompt: str, current_message: str):
+    """Converts Gradio chat history (tuples or message dicts) into LangChain messages."""
+    messages = [SystemMessage(content=system_prompt)]
+    if history:
+        for entry in history:
+            if isinstance(entry, (list, tuple)) and len(entry) == 2:
+                user_msg, bot_msg = entry
+                if user_msg:
+                    messages.append(HumanMessage(content=str(user_msg)))
+                if bot_msg:
+                    messages.append(AIMessage(content=str(bot_msg)))
+            elif isinstance(entry, dict):
+                role = entry.get("role", "")
+                text = clean_content(entry.get("content", ""))
+                if role == "user" and text:
+                    messages.append(HumanMessage(content=text))
+                elif role in ("assistant", "bot") and text:
+                    messages.append(AIMessage(content=text))
+    messages.append(HumanMessage(content=current_message))
+    return messages
+
+
+def chat_a1(message, history, persona: str = "Standard Assistant"):
+    base_persona = PERSONA_PROMPTS.get(persona, PERSONA_PROMPTS["Standard Assistant"])
+    system_prompt = (
+        f"{base_persona} "
+        "Drift AI is a cutting-edge AI research startup revolutionizing enterprise agentic architectures "
+        "with production-grade LangGraph, resumable memory systems, and multi-agent dyads."
+    )
+    messages = build_message_history(history, system_prompt, message)
+    state = {"messages": messages, "tool_call_count": 0, "should_fail": False}
     result = a1.app.invoke(state)
     return clean_content(result["messages"][-1].content)
 
-def run_a2_interactive():
-    state = {"task": "Write a python function that calculates the fibonacci sequence.", "worker_output": "", "review_verdict": "", "review_reason": ""}
+
+def run_a2_interactive(
+    task_text: str = "Write a python function that calculates the fibonacci sequence with type hints.",
+    max_revisions: int = 1,
+):
+    if not task_text or not task_text.strip():
+        task_text = "Write a python function that calculates the fibonacci sequence with type hints."
+    state = {
+        "task": task_text.strip(),
+        "worker_output": "",
+        "review_verdict": "",
+        "review_reason": "",
+        "revision_count": 0,
+        "max_revisions": int(max_revisions),
+    }
     result = a2.app.invoke(state)
-    worker_clean = clean_content(result.get('worker_output', ''))
-    
-    is_approved = "approved" in str(result.get('review_verdict', '')).lower()
-    verdict_md = f"### {'✅ APPROVED' if is_approved else '❌ REJECTED'}\n\n**Reviewer Feedback:**\n> {result.get('review_reason', '')}"
+    worker_clean = clean_content(result.get("worker_output", ""))
+    revisions_used = result.get("revision_count", 1)
+
+    is_approved = "approved" in str(result.get("review_verdict", "")).lower()
+    verdict_md = (
+        f"### {'✅ APPROVED' if is_approved else '❌ REJECTED'} "
+        f"*(Pass #{revisions_used})*\n\n"
+        f"**Reviewer Feedback:**\n> {result.get('review_reason', '')}"
+    )
     return verdict_md, worker_clean
+
 
 def run_a3_interactive(crash_toggle):
     from langchain_core.runnables import RunnableConfig
@@ -221,28 +259,38 @@ with gr.Blocks(title="Synapse AI Nexus") as demo:
             )
             
             def chat_with_persona(message, history, persona):
-                # We inject the persona dynamically into the chat function
-                prompt = f"[{persona} Persona] {message}"
-                return chat_a1(prompt, history)
+                return chat_a1(message, history, persona)
                 
             gr.ChatInterface(
                 fn=chat_with_persona,
                 additional_inputs=[persona_dropdown],
                 examples=[
                     ["What's the best caching strategy for a read-heavy API?", "Standard Assistant"], 
-                    ["How do I implement a circuit breaker?", "Standard Assistant"]
+                    ["How do I implement a circuit breaker?", "Strict Architect"]
                 ]
             )
 
         with gr.TabItem("🧠 Core 2: Architect Dyad"):
             with gr.Row(elem_classes="glass", variant="panel"):
                 with gr.Column(scale=1):
-                    gr.Markdown("### 👨‍💻 Adversarial Synthesis\nWatch two agents debate. The Worker writes Python, the Critic enforces strict architectural schemas.")
+                    gr.Markdown("### 👨‍💻 Adversarial Synthesis\nWatch two agents debate. The Worker writes Python, the Critic enforces strict architectural schemas and triggers self-correction.")
+                    a2_task = gr.Textbox(
+                        label="Engineering Task Specification",
+                        value="Write a python function that calculates the fibonacci sequence with type hints.",
+                        lines=2,
+                    )
+                    a2_revisions = gr.Slider(
+                        minimum=0,
+                        maximum=3,
+                        value=1,
+                        step=1,
+                        label="Max Self-Correction Revisions",
+                    )
                     a2_btn = gr.Button("⚡ Initialize Neural Dyad", variant="primary", size="lg")
                     a2_verdict = gr.Markdown("*(Awaiting Execution)*")
                 with gr.Column(scale=2):
                     a2_code = gr.Code(label="Synthesized Architecture (Python)", language="python")
-            a2_btn.click(run_a2_interactive, inputs=[], outputs=[a2_verdict, a2_code])
+            a2_btn.click(run_a2_interactive, inputs=[a2_task, a2_revisions], outputs=[a2_verdict, a2_code])
             
         with gr.TabItem("💾 Core 3: Quantum Memory"):
             with gr.Row(elem_classes="glass", variant="panel"):
@@ -250,6 +298,7 @@ with gr.Blocks(title="Synapse AI Nexus") as demo:
                     gr.Markdown("### 🛡️ Indestructible Checkpointing\nProcesses data with SQLite checkpoints. Survives terminal crashes without losing state.")
                     a3_crash = gr.Checkbox(label="🔥 Simulate Kernel Panic (Crash at #3)?", value=True)
                     a3_btn = gr.Button("🔄 Execute Resilient Pipeline", variant="primary", size="lg")
+                    reset_btn = gr.Button("🗑️ Reset Thread Checkpoint")
                     
                     # Feature 2: Memory Export
                     export_btn = gr.Button("📥 Export State to JSON")
@@ -276,41 +325,45 @@ with gr.Blocks(title="Synapse AI Nexus") as demo:
                         json.dump(export_data, tmp, indent=2)
                         tmp.close()
                         return tmp.name
+
+                    def reset_memory_thread():
+                        a3.reset_thread("test_session_1")
+                        return json.dumps({"status": "reset", "thread_id": "test_session_1", "message": "Checkpoint cleared."}, indent=2)
                         
                     export_btn.click(export_memory, inputs=[], outputs=[export_out])
                     
                 with gr.Column(scale=2):
                     a3_output = gr.Code(label="SQLite State Manifold", language="json")
             a3_btn.click(run_a3_interactive, inputs=a3_crash, outputs=a3_output)
+            reset_btn.click(reset_memory_thread, inputs=[], outputs=a3_output)
 
         # Feature 3: Voice Synthesis Tab
         with gr.TabItem("🎙️ Core 4: Vocal Synthesizer"):
             with gr.Row(elem_classes="glass", variant="panel"):
                 with gr.Column():
-                    gr.Markdown("### 🗣️ Neural Text-to-Speech\nConvert agent responses into hyper-realistic synthesized speech.")
+                    gr.Markdown("### 🗣️ Neural Text-to-Speech\nConvert agent responses into synthesized harmonic audio waveforms.")
                     voice_text = gr.Textbox(label="Input Text for Synthesis", lines=3, placeholder="Type here to synthesize voice...")
                     voice_btn = gr.Button("🔊 Synthesize Audio", variant="primary")
                     voice_out = gr.Audio(label="Synthesized Output", interactive=False)
                     
-                    def mock_synthesize(text):
-                        # Returning None mocks an empty audio file gracefully in Gradio
-                        return None 
+                    def run_voice_synthesis(text):
+                        return synthesize_speech_wav(text)
                     
-                    voice_btn.click(mock_synthesize, inputs=[voice_text], outputs=[voice_out])
+                    voice_btn.click(run_voice_synthesis, inputs=[voice_text], outputs=[voice_out])
 
         # Feature 4: Telemetry Dashboard
         with gr.TabItem("📊 Core 5: System Telemetry"):
             with gr.Row(elem_classes="glass", variant="panel"):
                 gr.Markdown("### 📈 Live Agent Telemetry & Resource Utilization")
+                refresh_telemetry_btn = gr.Button("🔄 Refresh Live Telemetry", size="sm")
             with gr.Row():
                 import pandas as pd
-                mock_data = pd.DataFrame({
-                    "Agent Node": ["Worker-1", "Critic-Alpha", "Researcher-X", "SQLite-Daemon"],
-                    "Tokens/Sec": [45.2, 38.9, 120.4, 0.0],
-                    "Latency (ms)": [112, 105, 89, 12],
-                    "Status": ["ACTIVE", "ACTIVE", "IDLE", "SYNCING"]
-                })
-                gr.Dataframe(value=mock_data, interactive=False)
+
+                def fetch_live_telemetry():
+                    return pd.DataFrame(telemetry_tracker.get_rows())
+
+                telemetry_df = gr.Dataframe(value=fetch_live_telemetry(), interactive=False)
+                refresh_telemetry_btn.click(fetch_live_telemetry, inputs=[], outputs=[telemetry_df])
 
     # Feature 5: Live Status Footer
     gr.HTML("<div style='text-align: center; margin-top: 20px; font-weight: bold; color: #f97316; letter-spacing: 2px;'><span style='display:inline-block; width:10px; height:10px; background-color:#10b981; border-radius:50%; margin-right:8px; animation: pulse-glow 2s infinite;'></span> ALL NEURAL SYSTEMS ONLINE</div>")
