@@ -369,4 +369,10 @@ with gr.Blocks(title="Synapse AI Nexus") as demo:
     gr.HTML("<div style='text-align: center; margin-top: 20px; font-weight: bold; color: #f97316; letter-spacing: 2px;'><span style='display:inline-block; width:10px; height:10px; background-color:#10b981; border-radius:50%; margin-right:8px; animation: pulse-glow 2s infinite;'></span> ALL NEURAL SYSTEMS ONLINE</div>")
 
 if __name__ == "__main__":
-    demo.launch(theme=custom_theme, css=css, js="function() { document.body.classList.add('dark'); }")
+    demo.launch(
+        server_name="127.0.0.1",
+        server_port=7860,
+        theme=custom_theme,
+        css=css,
+        js="function() { document.body.classList.add('dark'); }",
+    )
