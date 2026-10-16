@@ -99,233 +99,239 @@ custom_theme = gr.themes.Monochrome(
     font=[gr.themes.GoogleFont("Inter"), "ui-sans-serif", "sans-serif"],
     primary_hue="neutral",
     secondary_hue="neutral",
-    neutral_hue="neutral"
+    neutral_hue="neutral",
 )
 
 css = """
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+html, body {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: #050508 !important;
+    color: #ededf0 !important;
+    font-family: 'Inter', -apple-system, sans-serif !important;
+}
 
 :root, .dark, body, .gradio-container {
-    --background-fill-primary: #070709 !important;
-    --background-fill-secondary: #0d0d12 !important;
-    --border-color-primary: #1f1f28 !important;
-    --border-color-accent: #333342 !important;
+    --background-fill-primary: #050508 !important;
+    --background-fill-secondary: #0a0a0f !important;
+    --border-color-primary: #1c1c24 !important;
+    --border-color-accent: #2e2e3a !important;
     --body-text-color: #ededf0 !important;
-    --body-text-color-subdued: #9da0ae !important;
+    --body-text-color-subdued: #8e90a0 !important;
     --button-primary-background-fill: #ffffff !important;
     --button-primary-text-color: #000000 !important;
-    --panel-background-fill: #0c0c10 !important;
-    --input-background-fill: #09090d !important;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    --panel-background-fill: #09090e !important;
+    --input-background-fill: #07070b !important;
 }
 
-body, .gradio-container { 
-    background-color: #070709 !important;
-    background-image: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.03) 0%, transparent 60%) !important;
-    color: #ededf0 !important;
-    margin: 0 !important;
-    padding: clamp(12px, 2.5vw, 24px) !important;
-    min-height: 100vh !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-}
-
-/* Fluid responsive wrapper - stretches comfortably on wide screens without empty voids */
 .gradio-container {
-    max-width: 1360px !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 8px 18px !important;
+    box-sizing: border-box !important;
+    max-width: 1440px !important;
     width: 100% !important;
     margin: 0 auto !important;
+    overflow: hidden !important;
 }
 
-/* Sleek Responsive Header */
-.glow-header {
-    font-size: clamp(1.8rem, 4.5vw, 3rem) !important;
+/* Compact Top Brand Bar */
+.top-brand-bar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 4px 10px 8px 10px !important;
+    border-bottom: 1px solid #181822 !important;
+    flex-shrink: 0 !important;
+}
+.brand-title {
+    font-size: 1.15rem !important;
     font-weight: 700 !important;
-    letter-spacing: -1.5px !important;
-    background: linear-gradient(135deg, #ffffff 30%, #a1a1aa 100%) !important;
-    -webkit-background-clip: text !important;
-    background-clip: text !important;
-    color: transparent !important;
-    text-align: center;
-    margin: 0 0 4px 0 !important;
-    line-height: 1.15 !important;
+    letter-spacing: 1px !important;
+    color: #ffffff !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+.brand-badge {
+    font-size: 0.68rem !important;
+    background: #14141e !important;
+    color: #a1a1aa !important;
+    padding: 2px 7px !important;
+    border-radius: 4px !important;
+    border: 1px solid #222230 !important;
+    letter-spacing: 0.5px !important;
+}
+.status-pill {
+    display: inline-flex !important;
+    align-items: center !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    color: #10b981 !important;
+    gap: 5px !important;
+}
+.status-dot {
+    width: 7px !important;
+    height: 7px !important;
+    background: #10b981 !important;
+    border-radius: 50% !important;
+    box-shadow: 0 0 8px #10b981 !important;
 }
 
-.sub-header {
-    color: #71717a !important;
-    font-size: clamp(0.7rem, 1.8vw, 0.85rem) !important;
-    text-align: center;
-    letter-spacing: 2.5px;
-    margin-bottom: clamp(16px, 3vw, 28px) !important;
-    text-transform: uppercase;
-    font-weight: 500;
+/* Single Screen Tabs Shell */
+.main-tabs-shell {
+    flex: 1 1 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    margin-top: 6px !important;
+    border: 1px solid #1a1a24 !important;
+    border-radius: 10px !important;
+    background: #08080d !important;
+    overflow: hidden !important;
 }
 
-/* Fluid Glass Panels with Subtle Borders */
-.glass { 
-    background: #0b0b0f !important; 
-    border: 1px solid #1f1f28 !important; 
-    border-radius: 12px !important; 
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6) !important; 
-    overflow: hidden;
-    padding: clamp(12px, 2vw, 20px) !important;
-    margin-bottom: 16px !important;
+.main-tabs-shell > div:first-child {
+    flex-shrink: 0 !important;
 }
 
-/* Responsive Tab Navigation: NEVER clips into '...' */
 .tab-nav, div[role="tablist"] {
     display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 6px !important;
-    border-bottom: 1px solid #1f1f28 !important;
-    background: transparent !important;
-    padding: 6px 4px 12px 4px !important;
-    width: 100% !important;
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+    background: #06060a !important;
+    padding: 4px 8px !important;
+    border-bottom: 1px solid #181822 !important;
+    overflow-x: auto !important;
 }
 
 .tab-nav button, div[role="tablist"] button {
-    font-size: clamp(0.8rem, 1.6vw, 0.95rem) !important;
-    font-weight: 500 !important;
-    padding: 8px 14px !important;
-    border-radius: 8px !important;
+    font-size: 0.85rem !important;
+    padding: 6px 12px !important;
+    border-radius: 6px !important;
     border: 1px solid transparent !important;
-    color: #8f92a1 !important;
+    color: #8b8e9e !important;
     background: transparent !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
     white-space: nowrap !important;
     cursor: pointer !important;
 }
 
-.tab-nav button:hover, div[role="tablist"] button:hover {
-    color: #ffffff !important;
-    background: #14141c !important;
-}
-
 .tab-nav button.selected, div[role="tablist"] button.selected {
     color: #ffffff !important;
-    background: #191924 !important;
-    border-color: #2e2e3d !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+    background: #151520 !important;
+    border-color: #262638 !important;
 }
 
-/* Full Responsive Chatbot */
-.chatbot, div[data-testid="chatbot"] {
-    height: clamp(380px, 52vh, 600px) !important;
-    min-height: 360px !important;
-    border: 1px solid #1f1f28 !important;
-    border-radius: 10px !important;
-    background: #08080c !important;
-    width: 100% !important;
+/* Tab Panel Fills Remaining Height */
+div[role="tabpanel"] {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 8px 12px !important;
+    overflow: hidden !important;
 }
 
-/* Inputs, Textareas, and Dropdowns */
-textarea, input, .dropdown {
-    background-color: #0c0c12 !important;
-    color: #ededed !important;
-    border: 1px solid #22222d !important;
+/* One Screen Full Chat Panel */
+.chat-container-split {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    gap: 6px !important;
+}
+
+.persona-compact-row {
+    flex-shrink: 0 !important;
+    margin-bottom: 2px !important;
+}
+
+/* The Chatbot viewports auto-stretches to fill exact remaining height on screen */
+.one-screen-chatbot, div[data-testid="chatbot"] {
+    flex: 1 1 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: calc(100vh - 240px) !important;
+    border: 1px solid #181824 !important;
     border-radius: 8px !important;
-    font-size: 0.92rem !important;
-    transition: all 0.2s ease !important;
+    background: #050508 !important;
+    overflow-y: auto !important;
+}
+
+/* Input Area */
+textarea, input, .dropdown {
+    background-color: #08080c !important;
+    color: #ededed !important;
+    border: 1px solid #1e1e2b !important;
+    border-radius: 6px !important;
+    font-size: 0.88rem !important;
 }
 
 textarea:focus, input:focus {
-    border-color: #4b4b60 !important;
-    box-shadow: 0 0 0 1px #4b4b60 !important;
+    border-color: #3b3b4f !important;
+    box-shadow: 0 0 0 1px #3b3b4f !important;
     outline: none !important;
 }
 
-/* Action Buttons */
 .gradio-button {
-    border-radius: 8px !important;
+    border-radius: 6px !important;
+    font-size: 0.86rem !important;
     font-weight: 600 !important;
-    transition: all 0.18s ease !important;
-    cursor: pointer !important;
 }
 
-.gradio-button.primary {
-    background: #ffffff !important;
-    color: #000000 !important;
-    border: none !important;
-}
-
-.gradio-button.primary:hover {
-    background: #e4e4e7 !important;
-    transform: translateY(-1px);
-}
-
-/* Message Bubbles */
-.message-wrap .message.user {
-    background: #1a1a24 !important;
-    color: #f4f4f5 !important;
-    border-radius: 10px !important;
-    border: 1px solid #2e2e3d !important;
-}
-
-.message-wrap .message.bot {
-    background: #0e0e14 !important;
-    color: #e4e4e7 !important;
-    border: 1px solid #1f1f28 !important;
-    border-radius: 10px !important;
-}
-
-/* Mobile & Tablet Specific Optimizations */
-@media (max-width: 768px) {
-    body, .gradio-container {
-        padding: 8px 6px !important;
-    }
-    .glass {
-        padding: 10px !important;
-        border-radius: 8px !important;
-    }
-    .tab-nav, div[role="tablist"] {
-        gap: 4px !important;
-        overflow-x: auto !important;
-        flex-wrap: nowrap !important;
-        -webkit-overflow-scrolling: touch !important;
-    }
-    .tab-nav button, div[role="tablist"] button {
-        padding: 7px 11px !important;
-        font-size: 0.82rem !important;
-    }
-    .chatbot, div[data-testid="chatbot"] {
-        height: 380px !important;
-    }
-    .glow-header {
-        font-size: 1.7rem !important;
-    }
-    .sub-header {
-        font-size: 0.7rem !important;
-        letter-spacing: 1.5px;
-    }
+/* Examples Table Compact */
+div[data-testid="examples"] {
+    flex-shrink: 0 !important;
+    max-height: 90px !important;
+    overflow-y: auto !important;
+    margin-top: 4px !important;
 }
 """
 
 with gr.Blocks(title="Synapse AI Nexus", fill_width=True) as demo:
-    gr.HTML("<h1 class='glow-header'>SYNAPSE AI</h1><div class='sub-header'>Neural Interface Nexus</div>")
+    gr.HTML(
+        """
+        <div class='top-brand-bar'>
+            <div class='brand-title'>
+                ⚡ SYNAPSE AI <span class='brand-badge'>NEURAL INTERFACE NEXUS</span>
+            </div>
+            <div class='status-pill'>
+                <span class='status-dot'></span> ALL NEURAL SYSTEMS ONLINE
+            </div>
+        </div>
+        """
+    )
     
-    with gr.Tabs(elem_classes="glass"):
+    with gr.Tabs(elem_classes="main-tabs-shell"):
         with gr.TabItem("📡 1. Neural Researcher"):
-            # Feature 1: Persona Selector
-            persona_dropdown = gr.Dropdown(
-                choices=["Standard Assistant", "Strict Architect", "Creative Visionary"], 
-                value="Standard Assistant", 
-                label="Select Agent Persona",
-                info="Dynamically alters the agent's response behavior."
-            )
-            
-            def chat_with_persona(message, history, persona):
-                return chat_a1(message, history, persona)
-            
-            chat_box = gr.Chatbot(height=480, render=False)
-            gr.ChatInterface(
-                fn=chat_with_persona,
-                chatbot=chat_box,
-                additional_inputs=[persona_dropdown],
-                examples=[
-                    ["What's the best caching strategy for a read-heavy API?", "Standard Assistant"], 
-                    ["How do I implement a circuit breaker?", "Strict Architect"]
-                ]
-            )
+            with gr.Column(elem_classes="chat-container-split"):
+                persona_dropdown = gr.Dropdown(
+                    choices=["Standard Assistant", "Strict Architect", "Creative Visionary"], 
+                    value="Standard Assistant", 
+                    label="Active Persona",
+                    elem_classes="persona-compact-row",
+                )
+                
+                def chat_with_persona(message, history, persona):
+                    return chat_a1(message, history, persona)
+                
+                chat_box = gr.Chatbot(elem_classes="one-screen-chatbot", render=False)
+                gr.ChatInterface(
+                    fn=chat_with_persona,
+                    chatbot=chat_box,
+                    additional_inputs=[persona_dropdown],
+                    examples=[
+                        ["What's the best caching strategy for a read-heavy API?", "Standard Assistant"], 
+                        ["How do I implement a circuit breaker?", "Strict Architect"]
+                    ]
+                )
 
         with gr.TabItem("🧠 2. Architect Dyad"):
             with gr.Row(elem_classes="glass", variant="panel"):
@@ -422,8 +428,6 @@ with gr.Blocks(title="Synapse AI Nexus", fill_width=True) as demo:
                 telemetry_df = gr.Dataframe(value=fetch_live_telemetry(), interactive=False)
                 refresh_telemetry_btn.click(fetch_live_telemetry, inputs=[], outputs=[telemetry_df])
 
-    # Feature 5: Live Status Footer
-    gr.HTML("<div style='text-align: center; margin-top: 20px; font-weight: bold; color: #f97316; letter-spacing: 2px;'><span style='display:inline-block; width:10px; height:10px; background-color:#10b981; border-radius:50%; margin-right:8px; animation: pulse-glow 2s infinite;'></span> ALL NEURAL SYSTEMS ONLINE</div>")
 
 if __name__ == "__main__":
     demo.launch(
