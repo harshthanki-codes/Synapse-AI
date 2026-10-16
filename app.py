@@ -96,14 +96,18 @@ def run_a3_interactive(crash_toggle):
         return f"🚨 FATAL CRASH INTERCEPTED (Item #3)\n\nSystem state safely persisted to SQLite.\n\nDatabase Snapshot:\n{json.dumps(completed, indent=2)}\n\n(Uncheck 'Simulate Crash' and run again to watch the checkpointer perfectly resume.)"
 
 custom_theme = gr.themes.Monochrome(
-    font=[gr.themes.GoogleFont("Inter"), "ui-sans-serif", "sans-serif"],
+    font=[gr.themes.GoogleFont("Geist"), gr.themes.GoogleFont("Inter"), "ui-sans-serif", "sans-serif"],
     primary_hue="neutral",
     secondary_hue="neutral",
     neutral_hue="neutral",
 )
 
 css = """
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+*, *::before, *::after {
+    box-sizing: border-box !important;
+}
 
 html, body {
     height: 100vh !important;
@@ -111,22 +115,28 @@ html, body {
     overflow: hidden !important;
     margin: 0 !important;
     padding: 0 !important;
-    background-color: #050508 !important;
-    color: #ededf0 !important;
-    font-family: 'Inter', -apple-system, sans-serif !important;
+    background-color: #090a0f !important;
+    background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(120, 119, 198, 0.15), transparent),
+        radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.04), transparent 40%),
+        radial-gradient(circle at 0% 100%, rgba(99, 102, 241, 0.04), transparent 40%) !important;
+    color: #f1f2f6 !important;
+    font-family: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    -webkit-font-smoothing: antialiased !important;
+    text-rendering: optimizeLegibility !important;
 }
 
 :root, .dark, body, .gradio-container {
-    --background-fill-primary: #050508 !important;
-    --background-fill-secondary: #0a0a0f !important;
-    --border-color-primary: #1c1c24 !important;
-    --border-color-accent: #2e2e3a !important;
-    --body-text-color: #ededf0 !important;
-    --body-text-color-subdued: #8e90a0 !important;
+    --background-fill-primary: #090a0f !important;
+    --background-fill-secondary: #11121a !important;
+    --border-color-primary: #1e202e !important;
+    --border-color-accent: #2e3247 !important;
+    --body-text-color: #f1f2f6 !important;
+    --body-text-color-subdued: #9498ab !important;
     --button-primary-background-fill: #ffffff !important;
-    --button-primary-text-color: #000000 !important;
-    --panel-background-fill: #09090e !important;
-    --input-background-fill: #07070b !important;
+    --button-primary-text-color: #090a0f !important;
+    --panel-background-fill: #0e0f17 !important;
+    --input-background-fill: #11121a !important;
 }
 
 .gradio-container {
@@ -134,206 +144,343 @@ html, body {
     max-height: 100vh !important;
     display: flex !important;
     flex-direction: column !important;
-    padding: 8px 18px !important;
-    box-sizing: border-box !important;
-    max-width: 1440px !important;
+    padding: 10px 24px 12px 24px !important;
     width: 100% !important;
+    max-width: 1560px !important;
     margin: 0 auto !important;
     overflow: hidden !important;
 }
 
-/* Compact Top Brand Bar */
-.top-brand-bar {
+/* ================= TOP COMMAND BAR ================= */
+.top-command-bar {
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    padding: 4px 10px 8px 10px !important;
-    border-bottom: 1px solid #181822 !important;
+    padding: 6px 14px 10px 14px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
     flex-shrink: 0 !important;
 }
-.brand-title {
-    font-size: 1.15rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 1px !important;
-    color: #ffffff !important;
+
+.brand-section {
     display: flex !important;
     align-items: center !important;
-    gap: 8px !important;
+    gap: 12px !important;
 }
-.brand-badge {
+
+.brand-logo-mark {
+    width: 26px !important;
+    height: 26px !important;
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%) !important;
+    border-radius: 6px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #ffffff !important;
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    box-shadow: 0 0 16px rgba(99, 102, 241, 0.4) !important;
+}
+
+.brand-name {
+    font-size: 1.12rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.5px !important;
+    color: #ffffff !important;
+}
+
+.brand-pill {
     font-size: 0.68rem !important;
-    background: #14141e !important;
-    color: #a1a1aa !important;
-    padding: 2px 7px !important;
-    border-radius: 4px !important;
-    border: 1px solid #222230 !important;
+    font-weight: 600 !important;
+    color: #818cf8 !important;
+    background: rgba(99, 102, 241, 0.1) !important;
+    border: 1px solid rgba(99, 102, 241, 0.25) !important;
+    padding: 2px 8px !important;
+    border-radius: 9999px !important;
     letter-spacing: 0.5px !important;
+    text-transform: uppercase !important;
 }
-.status-pill {
+
+.meta-stats {
+    display: flex !important;
+    align-items: center !important;
+    gap: 16px !important;
+}
+
+.system-status-indicator {
     display: inline-flex !important;
     align-items: center !important;
-    font-size: 0.72rem !important;
-    font-weight: 600 !important;
-    color: #10b981 !important;
-    gap: 5px !important;
+    gap: 7px !important;
+    font-size: 0.76rem !important;
+    font-weight: 500 !important;
+    color: #34d399 !important;
+    background: rgba(16, 185, 129, 0.08) !important;
+    border: 1px solid rgba(16, 185, 129, 0.2) !important;
+    padding: 3px 10px !important;
+    border-radius: 9999px !important;
 }
-.status-dot {
-    width: 7px !important;
-    height: 7px !important;
+
+.pulsing-dot {
+    width: 6px !important;
+    height: 6px !important;
     background: #10b981 !important;
     border-radius: 50% !important;
     box-shadow: 0 0 8px #10b981 !important;
 }
 
-/* Single Screen Tabs Shell */
+/* ================= MAIN INTERFACE DECK ================= */
 .main-tabs-shell {
     flex: 1 1 auto !important;
     display: flex !important;
     flex-direction: column !important;
     min-height: 0 !important;
-    margin-top: 6px !important;
-    border: 1px solid #1a1a24 !important;
-    border-radius: 10px !important;
-    background: #08080d !important;
+    margin-top: 10px !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 14px !important;
+    background: rgba(14, 15, 23, 0.75) !important;
+    backdrop-filter: blur(20px) !important;
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7) !important;
     overflow: hidden !important;
-}
-
-.main-tabs-shell > div:first-child {
-    flex-shrink: 0 !important;
 }
 
 .tab-nav, div[role="tablist"] {
     display: flex !important;
-    flex-wrap: nowrap !important;
-    gap: 4px !important;
-    background: #06060a !important;
-    padding: 4px 8px !important;
-    border-bottom: 1px solid #181822 !important;
-    overflow-x: auto !important;
+    align-items: center !important;
+    gap: 6px !important;
+    background: rgba(10, 11, 16, 0.6) !important;
+    padding: 8px 12px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+    flex-shrink: 0 !important;
 }
 
 .tab-nav button, div[role="tablist"] button {
-    font-size: 0.85rem !important;
-    padding: 6px 12px !important;
-    border-radius: 6px !important;
+    font-size: 0.84rem !important;
+    font-weight: 500 !important;
+    padding: 7px 14px !important;
+    border-radius: 8px !important;
     border: 1px solid transparent !important;
-    color: #8b8e9e !important;
+    color: #8c90a3 !important;
     background: transparent !important;
-    white-space: nowrap !important;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
     cursor: pointer !important;
+}
+
+.tab-nav button:hover, div[role="tablist"] button:hover {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.04) !important;
 }
 
 .tab-nav button.selected, div[role="tablist"] button.selected {
     color: #ffffff !important;
-    background: #151520 !important;
-    border-color: #262638 !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
 }
 
-/* Tab Panel Fills Remaining Height */
 div[role="tabpanel"] {
     flex: 1 1 auto !important;
     min-height: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    padding: 8px 12px !important;
+    padding: 12px 16px !important;
     overflow: hidden !important;
 }
 
-/* One Screen Full Chat Panel */
-.chat-container-split {
+/* ================= CORE 1: DUAL-PANE PRODUCTION CHAT ================= */
+.core1-dual-pane {
+    display: grid !important;
+    grid-template-columns: 280px 1fr !important;
+    gap: 14px !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+}
+
+.sidebar-controls {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    background: rgba(17, 18, 26, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 10px !important;
+    padding: 14px !important;
+    overflow-y: auto !important;
+}
+
+.sidebar-header {
+    font-size: 0.74rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.8px !important;
+    text-transform: uppercase !important;
+    color: #6366f1 !important;
+    margin-bottom: 2px !important;
+}
+
+.sidebar-card {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 8px !important;
+    padding: 10px 12px !important;
+    font-size: 0.78rem !important;
+    color: #9da1b6 !important;
+    line-height: 1.45 !important;
+}
+
+.sidebar-card strong {
+    color: #e2e4ee !important;
+    font-weight: 600 !important;
+}
+
+.chat-stream-column {
     display: flex !important;
     flex-direction: column !important;
     flex: 1 1 auto !important;
     min-height: 0 !important;
-    gap: 6px !important;
+    height: 100% !important;
 }
 
-.persona-compact-row {
-    flex-shrink: 0 !important;
-    margin-bottom: 2px !important;
-}
-
-/* The Chatbot viewports auto-stretches to fill exact remaining height on screen */
-.one-screen-chatbot, div[data-testid="chatbot"] {
+/* Production Chatbot Window filling full remaining height */
+.production-chatbot, div[data-testid="chatbot"] {
     flex: 1 1 auto !important;
-    height: auto !important;
     min-height: 0 !important;
-    max-height: calc(100vh - 240px) !important;
-    border: 1px solid #181824 !important;
-    border-radius: 8px !important;
-    background: #050508 !important;
+    height: auto !important;
+    max-height: none !important;
+    background: rgba(10, 11, 17, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.07) !important;
+    border-radius: 10px !important;
     overflow-y: auto !important;
 }
 
-/* Input Area */
+/* ================= MODERN CHAT BUBBLES ================= */
+.message-wrap .message.user {
+    background: #1e202e !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 12px 12px 2px 12px !important;
+    padding: 10px 14px !important;
+    font-size: 0.9rem !important;
+    line-height: 1.5 !important;
+}
+
+.message-wrap .message.bot {
+    background: rgba(17, 18, 27, 0.9) !important;
+    color: #e6e8f2 !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 12px 12px 12px 2px !important;
+    padding: 12px 16px !important;
+    font-size: 0.9rem !important;
+    line-height: 1.55 !important;
+}
+
+/* Input Bar Styling (Anthropic / OpenAI Style) */
 textarea, input, .dropdown {
-    background-color: #08080c !important;
-    color: #ededed !important;
-    border: 1px solid #1e1e2b !important;
-    border-radius: 6px !important;
-    font-size: 0.88rem !important;
+    background-color: #12131d !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 8px !important;
+    font-size: 0.9rem !important;
+    transition: all 0.2s ease !important;
 }
 
 textarea:focus, input:focus {
-    border-color: #3b3b4f !important;
-    box-shadow: 0 0 0 1px #3b3b4f !important;
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25) !important;
     outline: none !important;
 }
 
-.gradio-button {
-    border-radius: 6px !important;
-    font-size: 0.86rem !important;
+/* Primary Action Buttons */
+.gradio-button.primary {
+    background: #ffffff !important;
+    color: #090a0f !important;
+    border-radius: 8px !important;
     font-weight: 600 !important;
+    font-size: 0.88rem !important;
+    transition: all 0.15s ease !important;
+    border: none !important;
 }
 
-/* Examples Table Compact */
+.gradio-button.primary:hover {
+    background: #f3f4f6 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Compact Examples Tray */
 div[data-testid="examples"] {
     flex-shrink: 0 !important;
-    max-height: 90px !important;
+    max-height: 78px !important;
     overflow-y: auto !important;
-    margin-top: 4px !important;
+    margin-top: 6px !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 8px !important;
+    background: rgba(14, 15, 23, 0.4) !important;
+}
+
+div[data-testid="examples"] table {
+    font-size: 0.78rem !important;
 }
 """
 
 with gr.Blocks(title="Synapse AI Nexus", fill_width=True) as demo:
     gr.HTML(
         """
-        <div class='top-brand-bar'>
-            <div class='brand-title'>
-                ⚡ SYNAPSE AI <span class='brand-badge'>NEURAL INTERFACE NEXUS</span>
+        <div class='top-command-bar'>
+            <div class='brand-section'>
+                <div class='brand-logo-mark'>S</div>
+                <div class='brand-name'>SYNAPSE AI</div>
+                <div class='brand-pill'>Enterprise Agent Nexus</div>
             </div>
-            <div class='status-pill'>
-                <span class='status-dot'></span> ALL NEURAL SYSTEMS ONLINE
+            <div class='meta-stats'>
+                <div class='system-status-indicator'>
+                    <span class='pulsing-dot'></span> CLUSTER OPERATIONAL
+                </div>
             </div>
         </div>
         """
     )
     
     with gr.Tabs(elem_classes="main-tabs-shell"):
-        with gr.TabItem("📡 1. Neural Researcher"):
-            with gr.Column(elem_classes="chat-container-split"):
-                persona_dropdown = gr.Dropdown(
-                    choices=["Standard Assistant", "Strict Architect", "Creative Visionary"], 
-                    value="Standard Assistant", 
-                    label="Active Persona",
-                    elem_classes="persona-compact-row",
-                )
+        with gr.TabItem("⚡ Autonomous Researcher"):
+            with gr.Row(elem_classes="core1-dual-pane"):
+                with gr.Column(elem_classes="sidebar-controls", scale=1):
+                    gr.HTML("<div class='sidebar-header'>Agent Architecture</div>")
+                    persona_dropdown = gr.Dropdown(
+                        choices=["Standard Assistant", "Strict Architect", "Creative Visionary"], 
+                        value="Standard Assistant", 
+                        label="Active Persona",
+                    )
+                    gr.HTML(
+                        """
+                        <div class='sidebar-card'>
+                            <strong>Model:</strong> Gemini Flash 2.5<br>
+                            <strong>Routing:</strong> Dynamic LangGraph Edges<br>
+                            <strong>Safety Bound:</strong> 6-Turn Max Tool Execution<br>
+                            <strong>Multi-Key Failover:</strong> 5 Active Keys
+                        </div>
+                        <div class='sidebar-card'>
+                            <strong>Production Tools:</strong><br>
+                            • <code>calculate_latency_budget</code><br>
+                            • <code>search_caching_strategies</code><br>
+                            • <code>fetch_system_metrics</code>
+                        </div>
+                        """
+                    )
                 
-                def chat_with_persona(message, history, persona):
-                    return chat_a1(message, history, persona)
-                
-                chat_box = gr.Chatbot(elem_classes="one-screen-chatbot", render=False)
-                gr.ChatInterface(
-                    fn=chat_with_persona,
-                    chatbot=chat_box,
-                    additional_inputs=[persona_dropdown],
-                    examples=[
-                        ["What's the best caching strategy for a read-heavy API?", "Standard Assistant"], 
-                        ["How do I implement a circuit breaker?", "Strict Architect"]
-                    ]
-                )
+                with gr.Column(elem_classes="chat-stream-column", scale=4):
+                    def chat_with_persona(message, history, persona):
+                        return chat_a1(message, history, persona)
+                    
+                    chat_box = gr.Chatbot(elem_classes="production-chatbot", render=False)
+                    gr.ChatInterface(
+                        fn=chat_with_persona,
+                        chatbot=chat_box,
+                        additional_inputs=[persona_dropdown],
+                        examples=[
+                            ["What's the best caching strategy for a read-heavy API?", "Standard Assistant"], 
+                            ["How do I implement a circuit breaker?", "Strict Architect"]
+                        ]
+                    )
 
-        with gr.TabItem("🧠 2. Architect Dyad"):
+        with gr.TabItem("⚖️ Worker–Reviewer Dyad"):
             with gr.Row(elem_classes="glass", variant="panel"):
                 with gr.Column(scale=1):
                     gr.Markdown("### 👨‍💻 Adversarial Synthesis\nWatch two agents debate. The Worker writes Python, the Critic enforces strict architectural schemas and triggers self-correction.")
