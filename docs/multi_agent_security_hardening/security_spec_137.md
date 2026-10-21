@@ -1,3 +1,3 @@
-# Multi-Agent Security Hardening Specification 136
+# Multi-Agent Security Hardening Specification 137
 
 Production threat modelling for zero-trust inter-agent authentication, cryptographic message signing, adversarial input sanitization, and runtime sandbox isolation in Synapse AI distributed agent clusters.
