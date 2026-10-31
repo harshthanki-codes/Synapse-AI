@@ -1,3 +1,0 @@
-# Optimization Spec 86
-
-Documenting advanced performance tuning techniques for Agentic scaling.

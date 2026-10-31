@@ -1,3 +1,0 @@
-# Optimization Spec 130
-
-Documenting advanced performance tuning techniques for Agentic scaling.

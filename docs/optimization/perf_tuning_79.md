@@ -1,3 +1,0 @@
-# Optimization Spec 79
-
-Documenting advanced performance tuning techniques for Agentic scaling.

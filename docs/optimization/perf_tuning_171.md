@@ -1,3 +1,0 @@
-# Optimization Spec 171
-
-Documenting advanced performance tuning techniques for Agentic scaling.

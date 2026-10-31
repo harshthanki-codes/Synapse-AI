@@ -10,8 +10,10 @@ __pycache__/
 .files/
 .resumed
 make_commits.py
-make_50_commits.py
-make_50_more_commits.py
+make_*.py
+top_up*.py
+cleanup_repo.py
+*.zip
 test_models.py
 test_quota.py
 uv.lock
