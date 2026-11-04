@@ -1,6 +1,6 @@
 version: '3.8'
 services:
-  drift-ai:
+  synapse-ai:
     build: .
     ports:
       - "8501:8501"

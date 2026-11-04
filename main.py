@@ -1,5 +1,5 @@
 def main():
-    print("Hello from driftai!")
+    print("Hello from Synapse-AI!")
 
 
 if __name__ == "__main__":

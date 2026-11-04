@@ -1,5 +1,5 @@
 [project]
-name = "drift-ai-agents"
+name = "synapse-ai"
 version = "1.0.0"
 description = "Production-grade autonomous AI agents built with LangGraph"
 authors = [{name = "Harsh Thanki"}]

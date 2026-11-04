@@ -38,7 +38,7 @@ def chat_a1(message, history, persona: str = "Standard Assistant"):
     base_persona = PERSONA_PROMPTS.get(persona, PERSONA_PROMPTS["Standard Assistant"])
     system_prompt = (
         f"{base_persona} "
-        "Drift AI is a cutting-edge AI research startup revolutionizing enterprise agentic architectures "
+        "Synapse-AI is a cutting-edge AI research startup revolutionizing enterprise agentic architectures "
         "with production-grade LangGraph, resumable memory systems, and multi-agent dyads."
     )
     messages = build_message_history(history, system_prompt, message)

@@ -450,7 +450,7 @@ wheels = [
 ]
 
 [[package]]
-name = "drift-ai-agents"
+name = "synapse-ai"
 version = "1.0.0"
 source = { virtual = "." }
 dependencies = [

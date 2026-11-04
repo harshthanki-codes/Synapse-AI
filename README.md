@@ -1,6 +1,6 @@
-# 🚀 Drift AI — Autonomous Agent Fleet
+# 🚀 Synapse-AI — Autonomous Agent Fleet
 
-[![Live Demo](https://img.shields.io/badge/🤗%20Live%20Demo-Drift%20AI%20Studio-blue?style=for-the-badge)](https://huggingface.co/spaces/harshthanki-codes/DriftAI)
+[![Live Demo](https://img.shields.io/badge/🤗%20Live%20Demo-Synapse--AI%20Studio-blue?style=for-the-badge)](https://huggingface.co/spaces/harshthanki-codes/Synapse-AI)
 [![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![LangGraph](https://img.shields.io/badge/LangGraph-Production-00A67E?style=flat-square)](https://langchain-ai.github.io/langgraph/)
 [![Gradio](https://img.shields.io/badge/Gradio-UI-FF7F0E?style=flat-square&logo=gradio)](https://gradio.app)
@@ -11,7 +11,7 @@
 
 ## 🎯 Live Demo
 
-**👉 [Try the live app here](https://huggingface.co/spaces/harshthanki-codes/DriftAI)** — Chat with the agents, trigger code synthesis, and simulate crash recovery right in your browser. No setup required.
+**👉 [Try the live app here](https://huggingface.co/spaces/harshthanki-codes/Synapse-AI)** — Chat with the agents, trigger code synthesis, and simulate crash recovery right in your browser. No setup required.
 
 ---
 
@@ -77,8 +77,8 @@ Processes a data stream with **continuous SQLite checkpointing**. If the process
 
 ```bash
 # Clone
-git clone https://github.com/harshthanki-codes/DriftAI.git
-cd DriftAI
+git clone https://github.com/harshthanki-codes/Synapse-AI.git
+cd Synapse-AI
 
 # Install dependencies
 pip install -r requirements.txt
